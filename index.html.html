@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuditoriumX – Book Your Stage</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+  :root {
+    --bg: #080a0f;
+    --surface: #0e1118;
+    --card: #13161f;
+    --border: #1e2330;
+    --gold: #c9a84c;
+    --gold2: #f0d080;
+    --red: #e84545;
+    --green: #2ecc71;
+    --text: #e8eaf0;
+    --muted: #6b7285;
+    --accent: #4361ee;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: .4;
+  }
+
+  /* ─── PAGE SYSTEM ─── */
+  .page { display: none; min-height: 100vh; animation: fadeIn .45s ease; }
+  .page.active { display: flex; flex-direction: column; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+  /* ─── NAV ─── */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 48px;
+    background: rgba(8,10,15,.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem; letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2), var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .logo span { color: var(--text); -webkit-text-fill-color: var(--text); opacity: .3; font-size: 1rem; margin-left: 6px; font-family: 'Space Mono'; }
+  .nav-user { display: flex; align-items: center; gap: 14px; }
+  .nav-badge {
+    font-family: 'Space Mono'; font-size: .7rem;
+    background: var(--card); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 20px; color: var(--gold);
+  }
+  .btn-logout {
+    font-family: 'Space Mono'; font-size: .7rem;
+    background: transparent; border: 1px solid var(--red);
+    color: var(--red); padding: 6px 16px; border-radius: 20px;
+    cursor: pointer; transition: all .25s;
+  }
+  .btn-logout:hover { background: var(--red); color: #fff; }
+
+  /* ─── HERO / AUTH LAYOUT ─── */
+  .auth-wrap {
+    flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+    min-height: calc(100vh - 0px);
+  }
+  .auth-left {
+    background: linear-gradient(145deg, #0a0c14, #0d1020);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 80px 60px; position: relative; overflow: hidden;
+  }
+  .auth-left::before {
+    content: '';
+    position: absolute; width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(201,168,76,.12) 0%, transparent 70%);
+    top: -100px; left: -100px; pointer-events: none;
+  }
+  .auth-left::after {
+    content: '';
+    position: absolute; width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(67,97,238,.08) 0%, transparent 70%);
+    bottom: -80px; right: -80px; pointer-events: none;
+  }
+  .hero-tag {
+    font-family: 'Space Mono'; font-size: .7rem; letter-spacing: 3px;
+    color: var(--gold); text-transform: uppercase; margin-bottom: 20px;
+  }
+  .hero-title {
+    font-family: 'Bebas Neue'; font-size: 5.5rem; line-height: .95;
+    letter-spacing: 2px; margin-bottom: 24px;
+  }
+  .hero-title em { color: var(--gold); font-style: normal; }
+  .hero-desc { color: var(--muted); line-height: 1.7; max-width: 380px; font-size: .95rem; }
+  .hero-stats { display: flex; gap: 40px; margin-top: 48px; }
+  .stat-item { }
+  .stat-num { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--gold); }
+  .stat-label { font-size: .75rem; color: var(--muted); font-family: 'Space Mono'; }
+
+  /* ─── AUTH CARD ─── */
+  .auth-right {
+    display: flex; align-items: center; justify-content: center;
+    padding: 60px 40px;
+    background: var(--surface);
+  }
+  .auth-card {
+    width: 100%; max-width: 420px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 44px 40px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5);
+  }
+  .auth-card h2 {
+    font-family: 'Bebas Neue'; font-size: 2.2rem; letter-spacing: 3px;
+    margin-bottom: 6px;
+  }
+  .auth-card p { color: var(--muted); font-size: .88rem; margin-bottom: 32px; }
+  .tab-row { display: flex; gap: 0; margin-bottom: 32px; background: var(--bg); border-radius: 10px; padding: 4px; }
+  .tab-btn {
+    flex: 1; padding: 10px; border: none; background: transparent;
+    color: var(--muted); font-family: 'DM Sans'; font-size: .9rem; font-weight: 600;
+    cursor: pointer; border-radius: 8px; transition: all .25s;
+  }
+  .tab-btn.active { background: var(--gold); color: #000; }
+
+  /* ─── FORM ELEMENTS ─── */
+  .form-group { margin-bottom: 20px; }
+  label { display: block; font-size: .78rem; font-family: 'Space Mono'; color: var(--muted); margin-bottom: 8px; letter-spacing: 1px; }
+  input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="time"], select, textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 13px 16px; border-radius: 10px;
+    font-family: 'DM Sans'; font-size: .95rem; transition: all .25s; outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.12);
+  }
+  select option { background: var(--card); }
+
+  .btn-primary {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: #000; font-weight: 700; font-size: 1rem;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'DM Sans'; letter-spacing: .5px;
+    transition: all .3s; position: relative; overflow: hidden;
+  }
+  .btn-primary::before {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(255,255,255,.15); transform: scaleX(0); transform-origin: left;
+    transition: transform .3s;
+  }
+  .btn-primary:hover::before { transform: scaleX(1); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(201,168,76,.3); }
+
+  .error-msg {
+    background: rgba(232,69,69,.12); border: 1px solid rgba(232,69,69,.3);
+    color: var(--red); padding: 12px 16px; border-radius: 8px;
+    font-size: .85rem; margin-bottom: 18px; display: none;
+  }
+  .success-msg {
+    background: rgba(46,204,113,.12); border: 1px solid rgba(46,204,113,.3);
+    color: var(--green); padding: 12px 16px; border-radius: 8px;
+    font-size: .85rem; margin-bottom: 18px; display: none;
+  }
+
+  /* ─── MAIN DASHBOARD ─── */
+  .dash-wrap { flex: 1; padding: 48px; max-width: 1300px; margin: 0 auto; width: 100%; }
+  .dash-header { margin-bottom: 40px; }
+  .dash-header h1 { font-family: 'Bebas Neue'; font-size: 3rem; letter-spacing: 3px; }
+  .dash-header h1 span { color: var(--gold); }
+  .dash-header p { color: var(--muted); margin-top: 6px; }
+
+  .dash-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; }
+
+  /* ─── BOOKING FORM CARD ─── */
+  .booking-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 36px;
+  }
+  .card-title {
+    font-family: 'Bebas Neue'; font-size: 1.6rem; letter-spacing: 2px;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 10px;
+  }
+  .card-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); display: inline-block; }
+  .card-sub { color: var(--muted); font-size: .85rem; margin-bottom: 28px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ─── SEAT MAP VISUAL ─── */
+  .seat-preview {
+    background: linear-gradient(145deg, #0a0c14, var(--card));
+    border: 1px solid var(--border); border-radius: 20px; padding: 36px;
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+  .stage {
+    width: 100%; max-width: 280px; height: 36px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue'; font-size: 1.1rem; letter-spacing: 3px; color: #000;
+    box-shadow: 0 6px 30px rgba(201,168,76,.4);
+  }
+  .seats-grid {
+    display: grid; grid-template-columns: repeat(10, 1fr);
+    gap: 5px; width: 100%; max-width: 300px;
+  }
+  .seat {
+    width: 100%; aspect-ratio: 1;
+    border-radius: 4px; background: var(--border);
+    transition: all .2s;
+  }
+  .seat.taken { background: var(--red); opacity: .6; }
+  .seat.free { background: rgba(201,168,76,.3); }
+  .seat.free:hover { background: var(--gold); transform: scale(1.2); cursor: pointer; }
+  .seat-legend { display: flex; gap: 20px; }
+  .leg-item { display: flex; align-items: center; gap: 7px; font-size: .78rem; color: var(--muted); font-family: 'Space Mono'; }
+  .leg-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  /* ─── BOOKINGS LIST ─── */
+  .bookings-section { margin-top: 32px; }
+  .bookings-section h3 { font-family: 'Bebas Neue'; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 16px; }
+  .booking-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--card); border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .booking-table th {
+    font-family: 'Space Mono'; font-size: .7rem; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--muted); padding: 16px 20px;
+    text-align: left; background: var(--bg); border-bottom: 1px solid var(--border);
+  }
+  .booking-table td { padding: 16px 20px; font-size: .9rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .booking-table tr:last-child td { border-bottom: none; }
+  .booking-table tr:hover td { background: rgba(201,168,76,.04); }
+  .status-badge {
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: .72rem; font-family: 'Space Mono'; font-weight: 700;
+  }
+  .status-confirmed { background: rgba(46,204,113,.15); color: var(--green); border: 1px solid rgba(46,204,113,.3); }
+  .status-pending { background: rgba(201,168,76,.15); color: var(--gold); border: 1px solid rgba(201,168,76,.3); }
+  .btn-cancel {
+    background: transparent; border: 1px solid var(--red); color: var(--red);
+    padding: 5px 12px; border-radius: 8px; font-size: .75rem; cursor: pointer;
+    font-family: 'Space Mono'; transition: all .2s;
+  }
+  .btn-cancel:hover { background: var(--red); color: #fff; }
+  .empty-state {
+    text-align: center; padding: 48px; color: var(--muted);
+  }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+  /* ─── STATS STRIP ─── */
+  .stats-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px 24px;
+    display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 3px; height: 100%; background: var(--gold);
+  }
+  .stat-card-num { font-family: 'Bebas Neue'; font-size: 2.2rem; color: var(--gold); }
+  .stat-card-label { font-size: .75rem; color: var(--muted); font-family: 'Space Mono'; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ─── TOAST ─── */
+  #toast {
+    position: fixed; bottom: 30px; right: 30px; z-index: 9998;
+    background: var(--card); border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    padding: 16px 24px; border-radius: 12px;
+    font-size: .9rem; max-width: 320px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    transform: translateY(20px); opacity: 0;
+    transition: all .35s ease; pointer-events: none;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.error { border-left-color: var(--red); }
+  #toast.success { border-left-color: var(--green); }
+
+  /* ─── DIVIDER ─── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* ─── ADMIN PANEL ─── */
+  .btn-admin {
+    font-family: 'Space Mono'; font-size: .7rem;
+    background: transparent; border: 1px solid var(--gold);
+    color: var(--gold); padding: 6px 16px; border-radius: 20px;
+    cursor: pointer; transition: all .25s;
+  }
+  .btn-admin:hover { background: var(--gold); color: #000; }
+  .btn-admin.active-panel { background: var(--gold); color: #000; }
+
+  .admin-wrap { flex: 1; padding: 48px; max-width: 1400px; margin: 0 auto; width: 100%; }
+  .admin-header { margin-bottom: 32px; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .admin-header h1 { font-family: 'Bebas Neue'; font-size: 3rem; letter-spacing: 3px; }
+  .admin-header h1 span { color: var(--gold); }
+  .admin-header p { color: var(--muted); margin-top: 6px; font-size: .88rem; }
+
+  .admin-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(201,168,76,.1); border: 1px solid rgba(201,168,76,.3);
+    color: var(--gold); padding: 8px 18px; border-radius: 20px;
+    font-family: 'Space Mono'; font-size: .72rem; letter-spacing: 1px;
+  }
+  .admin-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+  .admin-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 32px; }
+  .admin-stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px 22px;
+    position: relative; overflow: hidden;
+  }
+  .admin-stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 3px; height: 100%;
+  }
+  .admin-stat-card.gold::before { background: var(--gold); }
+  .admin-stat-card.green::before { background: var(--green); }
+  .admin-stat-card.red::before { background: var(--red); }
+  .admin-stat-card.blue::before { background: var(--accent); }
+  .admin-stat-card.muted::before { background: var(--muted); }
+  .admin-stat-num { font-family: 'Bebas Neue'; font-size: 2.2rem; }
+  .admin-stat-card.gold .admin-stat-num { color: var(--gold); }
+  .admin-stat-card.green .admin-stat-num { color: var(--green); }
+  .admin-stat-card.red .admin-stat-num { color: var(--red); }
+  .admin-stat-card.blue .admin-stat-num { color: var(--accent); }
+  .admin-stat-card.muted .admin-stat-num { color: var(--muted); }
+  .admin-stat-label { font-size: .72rem; color: var(--muted); font-family: 'Space Mono'; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+  .admin-toolbar {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .admin-toolbar input[type="text"] {
+    flex: 1; min-width: 200px; max-width: 320px;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 16px; border-radius: 10px;
+    font-family: 'DM Sans'; font-size: .9rem;
+  }
+  .admin-toolbar select {
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 14px; border-radius: 10px;
+    font-family: 'DM Sans'; font-size: .85rem; cursor: pointer;
+  }
+  .filter-label { font-family: 'Space Mono'; font-size: .7rem; color: var(--muted); letter-spacing: 1px; }
+  .btn-export {
+    margin-left: auto;
+    background: transparent; border: 1px solid var(--gold);
+    color: var(--gold); padding: 10px 20px; border-radius: 10px;
+    font-family: 'Space Mono'; font-size: .72rem; cursor: pointer; transition: all .25s;
+    letter-spacing: 1px;
+  }
+  .btn-export:hover { background: var(--gold); color: #000; }
+
+  .admin-section-title {
+    font-family: 'Bebas Neue'; font-size: 1.5rem; letter-spacing: 2px;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .admin-section-title .count-pill {
+    font-family: 'Space Mono'; font-size: .65rem;
+    background: rgba(201,168,76,.15); color: var(--gold);
+    border: 1px solid rgba(201,168,76,.3);
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 1px;
+  }
+
+  .admin-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--card); border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .admin-table th {
+    font-family: 'Space Mono'; font-size: .65rem; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--muted); padding: 16px 18px;
+    text-align: left; background: var(--bg); border-bottom: 1px solid var(--border);
+    white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  .admin-table th:hover { color: var(--gold); }
+  .admin-table th .sort-icon { opacity: .4; margin-left: 4px; }
+  .admin-table td { padding: 14px 18px; font-size: .88rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .admin-table tr:last-child td { border-bottom: none; }
+  .admin-table tr:hover td { background: rgba(201,168,76,.03); }
+
+  .btn-delete-booking {
+    background: transparent; border: 1px solid var(--red); color: var(--red);
+    padding: 5px 12px; border-radius: 8px; font-size: .72rem; cursor: pointer;
+    font-family: 'Space Mono'; transition: all .2s;
+  }
+  .btn-delete-booking:hover { background: var(--red); color: #fff; }
+
+  .user-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    font-size: .78rem; font-family: 'Space Mono'; color: var(--gold);
+  }
+
+  .admin-tabs { display: flex; gap: 0; margin-bottom: 28px; background: var(--bg); border-radius: 10px; padding: 4px; width: fit-content; }
+  .admin-tab-btn {
+    padding: 10px 24px; border: none; background: transparent;
+    color: var(--muted); font-family: 'DM Sans'; font-size: .9rem; font-weight: 600;
+    cursor: pointer; border-radius: 8px; transition: all .25s;
+  }
+  .admin-tab-btn.active { background: var(--gold); color: #000; }
+
+  .users-table-wrap { overflow-x: auto; }
+
+  /* ─── PAYMENT MODAL ─── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; animation: fadeIn .3s ease; }
+  .modal-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 24px; padding: 44px 40px; max-width: 480px; width: 90%;
+    box-shadow: 0 40px 100px rgba(0,0,0,.7); position: relative;
+    text-align: center;
+  }
+  .modal-close {
+    position: absolute; top: 18px; right: 18px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--muted); width: 34px; height: 34px; border-radius: 50%;
+    cursor: pointer; font-size: 1rem; transition: all .2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { border-color: var(--red); color: var(--red); }
+  .modal-title {
+    font-family: 'Bebas Neue'; font-size: 2rem; letter-spacing: 3px;
+    margin-bottom: 4px;
+  }
+  .modal-title span { color: var(--gold); }
+  .modal-sub { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+  .qr-container {
+    background: #fff; border-radius: 16px;
+    padding: 16px; display: inline-block; margin: 0 auto 24px;
+    box-shadow: 0 8px 30px rgba(201,168,76,.25);
+  }
+  .qr-container img { display: block; width: 200px; height: 200px; object-fit: contain; }
+  .qr-placeholder {
+    width: 200px; height: 200px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; color: #999; font-size: .8rem; font-family: 'Space Mono';
+  }
+  .qr-placeholder svg { opacity: .3; }
+  .charge-display {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .charge-label { font-family: 'Space Mono'; font-size: .72rem; color: var(--muted); letter-spacing: 1px; }
+  .charge-amount { font-family: 'Bebas Neue'; font-size: 1.8rem; color: var(--gold); }
+  .charge-note { font-size: .78rem; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .btn-paid {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--green), #27ae60);
+    color: #fff; font-weight: 700; font-size: .95rem;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'DM Sans'; transition: all .3s;
+  }
+  .btn-paid:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(46,204,113,.3); }
+
+  /* ─── ADMIN CHARGE SETTINGS ─── */
+  .settings-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px; margin-bottom: 28px;
+  }
+  .settings-card h3 {
+    font-family: 'Bebas Neue'; font-size: 1.4rem; letter-spacing: 2px;
+    margin-bottom: 6px; color: var(--gold);
+  }
+  .settings-card p { color: var(--muted); font-size: .83rem; margin-bottom: 24px; }
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .charge-input-wrap { position: relative; }
+  .charge-input-wrap .currency {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--gold); font-family: 'Space Mono'; font-size: .9rem; pointer-events: none;
+  }
+  .charge-input-wrap input { padding-left: 36px; }
+  .qr-upload-area {
+    border: 2px dashed var(--border); border-radius: 12px;
+    padding: 24px; text-align: center; cursor: pointer;
+    transition: all .25s; position: relative; overflow: hidden;
+  }
+  .qr-upload-area:hover { border-color: var(--gold); background: rgba(201,168,76,.04); }
+  .qr-upload-area input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .qr-upload-icon { font-size: 2rem; margin-bottom: 8px; }
+  .qr-upload-text { font-size: .82rem; color: var(--muted); font-family: 'Space Mono'; }
+  .qr-preview-thumb {
+    width: 80px; height: 80px; object-fit: contain;
+    background: #fff; border-radius: 8px; padding: 4px;
+    margin: 0 auto 8px; display: none;
+  }
+  .btn-save-settings {
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: #000; font-weight: 700; padding: 13px 28px;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'DM Sans'; font-size: .95rem; transition: all .3s;
+    margin-top: 20px;
+  }
+  .btn-save-settings:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,168,76,.3); }
+
+  /* ─── RECEIPT MODAL ─── */
+  .receipt-modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 11000;
+    background: rgba(0,0,0,.8); backdrop-filter: blur(10px);
+    align-items: center; justify-content: center;
+  }
+  .receipt-modal-overlay.open { display: flex; animation: fadeIn .3s ease; }
+  .receipt-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 24px; padding: 40px 36px; max-width: 460px; width: 90%;
+    box-shadow: 0 40px 100px rgba(0,0,0,.8); position: relative;
+    text-align: center;
+  }
+  .receipt-icon { font-size: 3rem; margin-bottom: 12px; }
+  .receipt-title { font-family: 'Bebas Neue'; font-size: 2rem; letter-spacing: 3px; color: var(--green); margin-bottom: 4px; }
+  .receipt-sub { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+  .receipt-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; margin-bottom: 20px; text-align: left;
+  }
+  .receipt-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border); font-size: .85rem;
+  }
+  .receipt-row:last-child { border-bottom: none; }
+  .receipt-row .rlabel { color: var(--muted); font-family: 'Space Mono'; font-size: .7rem; letter-spacing: 1px; }
+  .receipt-row .rval { font-weight: 600; font-family: 'Space Mono'; font-size: .78rem; color: var(--text); }
+  .receipt-row .rval.gold { color: var(--gold); font-family: 'Bebas Neue'; font-size: 1.4rem; }
+  .receipt-row .rval.green { color: var(--green); }
+  .receipt-txn { background: rgba(46,204,113,.08); border: 1px solid rgba(46,204,113,.25); border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-family: 'Space Mono'; font-size: .72rem; color: var(--green); word-break: break-all; text-align: left; }
+  .btn-receipt-close { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--green), #27ae60); color: #fff; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; font-family: 'DM Sans'; font-size: .95rem; transition: all .3s; }
+  .btn-receipt-close:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(46,204,113,.3); }
+
+  /* ─── RAZORPAY BADGE in modal ─── */
+  .rzp-badge { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; }
+  .rzp-badge-inner { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-family: 'Space Mono'; font-size: .68rem; color: var(--muted); }
+  .rzp-dot { width: 7px; height: 7px; border-radius: 50%; background: #2563eb; }
+
+  /* ─── PAYMENT METHOD TOGGLE ─── */
+  .pay-method-row { display: flex; gap: 10px; margin-bottom: 20px; }
+  .pay-method-btn {
+    flex: 1; padding: 12px 8px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--muted); cursor: pointer; font-family: 'Space Mono';
+    font-size: .72rem; transition: all .25s; text-align: center;
+  }
+  .pay-method-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,.08); }
+  .pay-method-section { display: none; }
+  .pay-method-section.active { display: block; }
+
+  /* ─── ADMIN LOGIN PANEL (dedicated) ─── */
+  .admin-login-note { margin-top: 14px; font-size: .78rem; color: var(--muted); font-family: 'Space Mono'; text-align: center; }
+  .admin-login-link { color: var(--gold); cursor: pointer; text-decoration: underline; }
+
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .auth-wrap { grid-template-columns: 1fr; }
+    .auth-left { display: none; }
+    .dash-grid { grid-template-columns: 1fr; }
+    .stats-strip { grid-template-columns: repeat(2,1fr); }
+    .admin-stats { grid-template-columns: repeat(2,1fr); }
+    nav { padding: 16px 24px; }
+    .dash-wrap { padding: 24px; }
+    .admin-wrap { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     PAGE 1 – AUTH (Login / Register)
+════════════════════════════════════════════ -->
+<div id="page-auth" class="page active">
+  <div class="auth-wrap">
+
+    <!-- LEFT HERO -->
+    <div class="auth-left">
+      <div class="hero-tag">✦ Premium Venue Management</div>
+      <div class="hero-title">BOOK<br>YOUR<br><em>STAGE.</em></div>
+      <p class="hero-desc">Reserve the entire auditorium for your event — corporate, cultural, or academic. Simple booking. Zero conflicts. Total control.</p>
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-num">500</div>
+          <div class="stat-label">Seat Capacity</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">24/7</div>
+          <div class="stat-label">Booking Access</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">0</div>
+          <div class="stat-label">Double Bookings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT FORM -->
+    <div class="auth-right">
+      <div class="auth-card">
+        <h2>AUDITORIUM<span style="color:var(--gold)">X</span></h2>
+        <p>Manage your venue bookings with ease.</p>
+
+        <div class="tab-row">
+          <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+          <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="form-login">
+          <div id="login-error" class="error-msg"></div>
+          <div class="form-group">
+            <label>EMAIL ADDRESS</label>
+            <input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+          <div class="form-group">
+            <label>PASSWORD</label>
+            <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+          <button class="btn-primary" onclick="doLogin()">Sign In →</button>
+          <div class="admin-login-note">
+            Admin login: <span class="admin-login-link" onclick="fillAdminCredentials()">use admin credentials</span>
+          </div>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div id="form-register" style="display:none;">
+          <div id="reg-error" class="error-msg"></div>
+          <div id="reg-success" class="success-msg"></div>
+          <div class="form-group">
+            <label>FULL NAME</label>
+            <input type="text" id="reg-name" placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label>EMAIL ADDRESS</label>
+            <input type="email" id="reg-email" placeholder="you@example.com">
+          </div>
+          <div class="form-group">
+            <label>PASSWORD</label>
+            <input type="password" id="reg-pass" placeholder="Min 6 characters">
+          </div>
+          <div class="form-group">
+            <label>CONFIRM PASSWORD</label>
+            <input type="password" id="reg-pass2" placeholder="Re-enter password">
+          </div>
+          <button class="btn-primary" onclick="doRegister()">Create Account →</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     PAGE 2 – DASHBOARD
+════════════════════════════════════════════ -->
+<div id="page-dash" class="page">
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo">AUDITORIUM<span>X</span></div>
+    <div class="nav-user">
+      <div class="nav-badge" id="nav-name">👤 User</div>
+      <button class="btn-admin" id="btn-admin-panel" style="display:none" onclick="goAdmin()">⚙ Admin Panel</button>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="dash-wrap">
+
+    <div class="dash-header">
+      <h1>BOOKING <span>DASHBOARD</span></h1>
+      <p>Reserve the auditorium for your event. Conflicts are automatically prevented.</p>
+    </div>
+
+    <!-- STATS STRIP -->
+    <div class="stats-strip">
+      <div class="stat-card">
+        <div class="stat-card-num" id="stat-total">0</div>
+        <div class="stat-card-label">Total Bookings</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-num" id="stat-mine">0</div>
+        <div class="stat-card-label">My Bookings</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-num" id="stat-today">0</div>
+        <div class="stat-card-label">Today's Events</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-num" id="stat-cap">500</div>
+        <div class="stat-card-label">Seat Capacity</div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+
+      <!-- BOOKING FORM -->
+      <div class="booking-card">
+        <div class="card-title"><span class="dot"></span> New Booking</div>
+        <p class="card-sub">Fill in the details to reserve the auditorium.</p>
+
+        <div id="book-error" class="error-msg"></div>
+        <div id="book-success" class="success-msg"></div>
+
+        <div class="form-group">
+          <label>BOOKING NAME / EVENT TITLE</label>
+          <input type="text" id="b-name" placeholder="Annual Tech Summit 2025">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>DATE</label>
+            <input type="date" id="b-date">
+          </div>
+          <div class="form-group">
+            <label>PURPOSE</label>
+            <select id="b-purpose">
+              <option value="">Select type...</option>
+              <option>Conference</option>
+              <option>Cultural Event</option>
+              <option>Academic Exam</option>
+              <option>Corporate Meeting</option>
+              <option>Workshop</option>
+              <option>Seminar</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>START TIME</label>
+            <input type="time" id="b-start">
+          </div>
+          <div class="form-group">
+            <label>END TIME</label>
+            <input type="time" id="b-end">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ADDITIONAL NOTES (OPTIONAL)</label>
+          <input type="text" id="b-notes" placeholder="Equipment needed, special setup...">
+        </div>
+        <div id="charge-preview" style="display:none; background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.2); border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-family:'Space Mono';font-size:.72rem;color:var(--muted)">BOOKING CHARGE</span>
+          <span style="font-family:'Bebas Neue';font-size:1.5rem;color:var(--gold)" id="form-charge-display">₹0</span>
+        </div>
+        <button class="btn-primary" onclick="openPaymentModal()">💳 Proceed to Payment →</button>
+      </div>
+
+      <!-- SEAT MAP VISUAL -->
+      <div class="seat-preview">
+        <div class="card-title"><span class="dot"></span> Auditorium Layout</div>
+        <div class="stage">STAGE</div>
+        <div class="seats-grid" id="seat-map"></div>
+        <div class="seat-legend">
+          <div class="leg-item"><div class="leg-dot" style="background:rgba(201,168,76,.3)"></div>Available</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--red);opacity:.6"></div>Booked</div>
+        </div>
+        <div style="text-align:center; color:var(--muted); font-size:.8rem; font-family:'Space Mono'; margin-top:8px;">
+          Entire auditorium booked as a whole unit.<br>500 seats total capacity.
+        </div>
+        <div id="conflict-info" style="display:none; background:rgba(232,69,69,.1); border:1px solid rgba(232,69,69,.3); border-radius:10px; padding:14px; width:100%; font-size:.82rem; color:var(--red);">
+          ⚠️ Conflict detected on selected date/time. See table below.
+        </div>
+        <div id="available-info" style="display:none; background:rgba(46,204,113,.1); border:1px solid rgba(46,204,113,.3); border-radius:10px; padding:14px; width:100%; font-size:.82rem; color:var(--green);">
+          ✓ Auditorium is available for the selected slot!
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOOKINGS TABLE -->
+    <div class="bookings-section">
+      <h3>ALL BOOKINGS</h3>
+      <div id="bookings-container"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE 3 – ADMIN PANEL
+════════════════════════════════════════════ -->
+<div id="page-admin" class="page">
+
+  <!-- NAV (shared look) -->
+  <nav>
+    <div class="logo">AUDITORIUM<span>X</span></div>
+    <div class="nav-user">
+      <div class="admin-badge">🛡 ADMIN MODE</div>
+      <button class="btn-admin" onclick="goDashboard()">← Dashboard</button>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="admin-wrap">
+
+    <div class="admin-header">
+      <div>
+        <h1>ADMIN <span>PANEL</span></h1>
+        <p>Full visibility and control over all bookings and registered users.</p>
+      </div>
+    </div>
+
+    <!-- ADMIN STATS -->
+    <div class="admin-stats">
+      <div class="admin-stat-card gold">
+        <div class="admin-stat-num" id="adm-total">0</div>
+        <div class="admin-stat-label">Total Bookings</div>
+      </div>
+      <div class="admin-stat-card green">
+        <div class="admin-stat-num" id="adm-upcoming">0</div>
+        <div class="admin-stat-label">Upcoming</div>
+      </div>
+      <div class="admin-stat-card muted">
+        <div class="admin-stat-num" id="adm-past">0</div>
+        <div class="admin-stat-label">Completed</div>
+      </div>
+      <div class="admin-stat-card blue">
+        <div class="admin-stat-num" id="adm-users">0</div>
+        <div class="admin-stat-label">Registered Users</div>
+      </div>
+      <div class="admin-stat-card red">
+        <div class="admin-stat-num" id="adm-today">0</div>
+        <div class="admin-stat-label">Today's Events</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="admin-tabs">
+      <button class="admin-tab-btn active" id="atab-bookings" onclick="switchAdminTab('bookings')">📋 All Bookings</button>
+      <button class="admin-tab-btn" id="atab-users" onclick="switchAdminTab('users')">👥 Users</button>
+      <button class="admin-tab-btn" id="atab-settings" onclick="switchAdminTab('settings')">⚙ Payment Settings</button>
+    </div>
+
+    <!-- BOOKINGS TAB -->
+    <div id="admin-bookings-tab">
+      <!-- TOOLBAR -->
+      <div class="admin-toolbar">
+        <span class="filter-label">SEARCH</span>
+        <input type="text" id="adm-search" placeholder="Search by event, user, purpose…" oninput="renderAdminTable()">
+        <span class="filter-label">FILTER</span>
+        <select id="adm-filter-purpose" onchange="renderAdminTable()">
+          <option value="">All Purposes</option>
+          <option>Conference</option>
+          <option>Cultural Event</option>
+          <option>Academic Exam</option>
+          <option>Corporate Meeting</option>
+          <option>Workshop</option>
+          <option>Seminar</option>
+          <option>Other</option>
+        </select>
+        <select id="adm-filter-status" onchange="renderAdminTable()">
+          <option value="">All Statuses</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="past">Completed</option>
+        </select>
+        <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+
+      <div class="admin-section-title">
+        All Bookings
+        <span class="count-pill" id="adm-count-pill">0 records</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <div id="admin-bookings-container"></div>
+      </div>
+    </div>
+
+    <!-- USERS TAB -->
+    <div id="admin-users-tab" style="display:none;">
+      <div class="admin-section-title">
+        Registered Users
+        <span class="count-pill" id="adm-users-pill">0 users</span>
+      </div>
+      <div class="users-table-wrap">
+        <div id="admin-users-container"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="admin-settings-tab" style="display:none;">
+
+      <div class="settings-card">
+        <h3>💰 Auditorium Charges</h3>
+        <p>Set the booking fee for the auditorium. This amount will be shown to users during checkout.</p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>CHARGE PER BOOKING (₹)</label>
+            <div class="charge-input-wrap">
+              <span class="currency">₹</span>
+              <input type="number" id="adm-charge-amount" placeholder="e.g. 5000" min="0" step="100">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>CHARGE LABEL / NOTE</label>
+            <input type="text" id="adm-charge-label" placeholder="e.g. Full day rental fee">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <h3>⚡ Razorpay Integration</h3>
+        <p>Enter your Razorpay Key ID to enable online payments via Card, UPI, Net Banking, and Wallets. Get your key from <strong style="color:var(--gold)">dashboard.razorpay.com</strong>.</p>
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>RAZORPAY KEY ID</label>
+            <input type="text" id="adm-rzp-key" placeholder="rzp_live_XXXXXXXXXXXXXXXXX">
+          </div>
+          <div class="form-group">
+            <label>BUSINESS / AUDITORIUM NAME</label>
+            <input type="text" id="adm-rzp-name" placeholder="e.g. AuditoriumX">
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:.78rem;color:var(--muted);font-family:'Space Mono';line-height:1.7">
+          ✓ Use <strong style="color:var(--gold)">rzp_test_</strong> key for testing • <strong style="color:var(--gold)">rzp_live_</strong> for production<br>
+          ✓ Payment notifications are shown as receipts immediately after payment
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <h3>📱 Payment QR Code</h3>
+        <p>Upload your UPI / bank QR code image. This will be shown to users when they proceed to payment.</p>
+        <div class="settings-grid">
+          <div>
+            <div class="qr-upload-area" id="qr-upload-area">
+              <input type="file" accept="image/*" id="qr-file-input" onchange="handleQRUpload(event)">
+              <img id="qr-thumb-preview" class="qr-preview-thumb" src="" alt="QR Preview">
+              <div class="qr-upload-icon">📲</div>
+              <div class="qr-upload-text" id="qr-upload-text">Click to upload QR image<br>(PNG, JPG supported)</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;justify-content:center;gap:14px;">
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;">
+              <div style="font-family:'Space Mono';font-size:.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">CURRENT CHARGE PREVIEW</div>
+              <div style="font-family:'Bebas Neue';font-size:2.5rem;color:var(--gold)" id="settings-charge-preview">₹0</div>
+              <div style="font-size:.78rem;color:var(--muted)" id="settings-charge-label-preview">Not set</div>
+            </div>
+            <div style="font-size:.78rem;color:var(--muted);line-height:1.6;font-family:'Space Mono';">
+              ✓ QR is shown when user clicks "Proceed to Payment"<br>
+              ✓ Charge amount is displayed on the checkout popup
+            </div>
+          </div>
+        </div>
+        <button class="btn-save-settings" onclick="savePaymentSettings()">💾 Save Payment Settings</button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAYMENT MODAL
+════════════════════════════════════════════ -->
+<div id="payment-modal" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closePaymentModal()">✕</button>
+    <div class="modal-title">COMPLETE <span>PAYMENT</span></div>
+    <p class="modal-sub">Choose a payment method to confirm your booking.</p>
+
+    <!-- Method toggle -->
+    <div class="pay-method-row">
+      <button class="pay-method-btn active" id="pmb-razorpay" onclick="switchPayMethod('razorpay')">⚡ Razorpay / Card / UPI</button>
+      <button class="pay-method-btn" id="pmb-qr" onclick="switchPayMethod('qr')">📱 QR Code</button>
+    </div>
+
+    <!-- RAZORPAY SECTION -->
+    <div class="pay-method-section active" id="pms-razorpay">
+      <div class="rzp-badge">
+        <div class="rzp-badge-inner"><span class="rzp-dot"></span>Secured by Razorpay</div>
+      </div>
+      <div class="charge-display">
+        <div>
+          <div class="charge-label">BOOKING CHARGE</div>
+          <div class="charge-amount" id="modal-charge-amount">₹0</div>
+        </div>
+        <div style="text-align:right">
+          <div class="charge-label">BOOKING FOR</div>
+          <div style="font-family:'Space Mono';font-size:.85rem;color:var(--text)" id="modal-booking-name">—</div>
+        </div>
+      </div>
+      <p class="charge-note">Pay securely using Credit/Debit Card, UPI, Net Banking, or Wallets via Razorpay.</p>
+      <button class="btn-paid" style="background:linear-gradient(135deg,#2563eb,#1d4ed8)" onclick="launchRazorpay()">⚡ Pay with Razorpay →</button>
+      <div style="margin-top:12px;font-size:.72rem;color:var(--muted);font-family:'Space Mono'">
+        ⚠️ Demo: uses Razorpay test key. Enter your live key in Admin → Payment Settings.
+      </div>
+    </div>
+
+    <!-- QR SECTION -->
+    <div class="pay-method-section" id="pms-qr">
+      <div class="qr-container">
+        <img id="modal-qr-img" src="" alt="QR Code" style="display:none;">
+        <div id="modal-qr-placeholder" class="qr-placeholder">
+          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="5" y="5" width="3" height="3" fill="currentColor"/>
+            <rect x="16" y="5" width="3" height="3" fill="currentColor"/>
+            <rect x="5" y="16" width="3" height="3" fill="currentColor"/>
+          </svg>
+          <span>QR not set by admin yet</span>
+        </div>
+      </div>
+      <div class="charge-display">
+        <div>
+          <div class="charge-label">BOOKING CHARGE</div>
+          <div class="charge-amount" id="modal-charge-amount2">₹0</div>
+        </div>
+        <div style="text-align:right">
+          <div class="charge-label">BOOKING FOR</div>
+          <div style="font-family:'Space Mono';font-size:.85rem;color:var(--text)" id="modal-booking-name2">—</div>
+        </div>
+      </div>
+      <p class="charge-note">
+        📱 Open any UPI app (PhonePe, GPay, Paytm etc.) and scan the QR above.<br>
+        After payment, click <strong style="color:var(--green)">Mark as Paid</strong> below.
+      </p>
+      <button class="btn-paid" onclick="confirmPayment('qr')">✓ Mark as Paid &amp; Confirm Booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAYMENT RECEIPT / SUCCESS MODAL
+════════════════════════════════════════════ -->
+<div id="receipt-modal" class="receipt-modal-overlay">
+  <div class="receipt-box">
+    <div class="receipt-icon">🎉</div>
+    <div class="receipt-title">BOOKING CONFIRMED</div>
+    <p class="receipt-sub">Your payment was successful. A summary of your booking is below.</p>
+    <div class="receipt-card" id="receipt-details">
+      <!-- filled by JS -->
+    </div>
+    <div class="receipt-txn" id="receipt-txn-id">Transaction ID: —</div>
+    <button class="btn-receipt-close" onclick="closeReceiptModal()">✓ Done — View My Bookings</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  DATABASE – localStorage helpers
+// ─────────────────────────────────────────────
+// ─── localStorage helpers (silent-fail so file:// works) ───
+function _lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch(e) { return fallback; }
+}
+function _lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+function _lsClear(key)    { try { localStorage.removeItem(key); } catch(e) {} }
+
+// Admin is always pre-seeded in memory so login works even when
+// localStorage is blocked (file://, private mode, strict browsers).
+const _ADMIN = { id: 'admin', name: 'Administrator', email: 'admin@auditoriumx.com', password: 'admin123', isAdmin: true };
+
+function _mergeUsers(stored) {
+  if (!stored || !stored.length) return [_ADMIN];
+  if (!stored.find(u => u.email === _ADMIN.email)) return [_ADMIN, ...stored];
+  return stored;
+}
+
+const _store = {
+  users:    _mergeUsers(_lsGet('ax_users', [])),
+  bookings: _lsGet('ax_bookings', []),
+  session:  _lsGet('ax_session',  null),
+  payment:  _lsGet('ax_payment',  { charge: 0, label: '', qr: '' }),
+};
+
+const DB = {
+  getUsers:    ()  => _store.users,
+  setUsers:    (d) => { _store.users = d; _lsSet('ax_users', d); },
+  getBookings: ()  => _store.bookings,
+  setBookings: (d) => { _store.bookings = d; _lsSet('ax_bookings', d); },
+  getSession:  ()  => _store.session,
+  setSession:  (d) => { _store.session = d; _lsSet('ax_session', d); },
+  clearSession:()  => { _store.session = null; _lsClear('ax_session'); },
+  getPayment:  ()  => _store.payment,
+  setPayment:  (d) => { _store.payment = d; _lsSet('ax_payment', d); },
+};
+
+// ─────────────────────────────────────────────
+//  UTILITY
+// ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3500);
+}
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+function showSuccess(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+//  AUTH
+// ─────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('form-login').style.display   = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('form-register').style.display= tab === 'register' ? 'block' : 'none';
+}
+
+function fillAdminCredentials() {
+  document.getElementById('login-email').value = 'admin@auditoriumx.com';
+  document.getElementById('login-pass').value  = 'admin123';
+  showToast('Admin credentials filled. Click Sign In.', 'success');
+}
+
+function doLogin() {
+  try {
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const pass  = document.getElementById('login-pass').value;
+    if (!email || !pass) return showError('login-error', 'Please fill in all fields.');
+
+    // Always re-merge admin into live user store before checking
+    let users = DB.getUsers();
+    if (!users.find(u => u.email === _ADMIN.email)) {
+      users = [_ADMIN, ...users];
+      DB.setUsers(users);
+    }
+
+    const user = users.find(u => u.email === email && u.password === pass);
+    if (!user) return showError('login-error', 'Invalid email or password.');
+
+    // Ensure isAdmin flag is preserved correctly
+    const sessionUser = { ...user };
+    DB.setSession(sessionUser);
+
+    if (sessionUser.isAdmin) {
+      enterAdminPanel(sessionUser);
+    } else {
+      enterDashboard(sessionUser);
+    }
+  } catch(e) {
+    showError('login-error', 'Login error: ' + e.message);
+    console.error(e);
+  }
+}
+
+function doRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('reg-pass').value;
+  const pass2 = document.getElementById('reg-pass2').value;
+  if (!name || !email || !pass || !pass2) return showError('reg-error', 'All fields are required.');
+  if (pass.length < 6) return showError('reg-error', 'Password must be at least 6 characters.');
+  if (pass !== pass2)  return showError('reg-error', 'Passwords do not match.');
+  const users = DB.getUsers();
+  if (users.find(u => u.email === email)) return showError('reg-error', 'Email already registered.');
+  const user = { id: uid(), name, email, password: pass };
+  users.push(user);
+  DB.setUsers(users);
+  showSuccess('reg-success', 'Account created! You can now sign in.');
+  setTimeout(() => switchTab('login'), 1500);
+}
+
+function logout() {
+  DB.clearSession();
+  showPage('page-auth');
+}
+
+// ─────────────────────────────────────────────
+//  DASHBOARD
+// ─────────────────────────────────────────────
+function enterDashboard(user) {
+  document.getElementById('nav-name').textContent = '👤 ' + user.name;
+  document.getElementById('btn-admin-panel').style.display = user.isAdmin ? '' : 'none';
+  // Set min date
+  document.getElementById('b-date').min = new Date().toISOString().split('T')[0];
+  renderAll();
+  updateFormChargePreview();
+  showPage('page-dash');
+  showToast('Welcome back, ' + user.name + '!');
+}
+
+function renderAll() {
+  renderStats();
+  renderSeatMap();
+  renderTable();
+}
+
+function renderStats() {
+  const bookings = DB.getBookings();
+  const session  = DB.getSession();
+  const today    = new Date().toISOString().split('T')[0];
+  document.getElementById('stat-total').textContent = bookings.length;
+  document.getElementById('stat-mine').textContent  = bookings.filter(b => b.userId === session.id).length;
+  document.getElementById('stat-today').textContent = bookings.filter(b => b.date === today).length;
+}
+
+function renderSeatMap() {
+  const map = document.getElementById('seat-map');
+  map.innerHTML = '';
+  const bookings = DB.getBookings();
+  const today = new Date().toISOString().split('T')[0];
+  const hasToday = bookings.some(b => b.date === today);
+  for (let i = 0; i < 50; i++) {
+    const seat = document.createElement('div');
+    seat.className = 'seat ' + (hasToday ? 'taken' : 'free');
+    map.appendChild(seat);
+  }
+}
+
+function checkConflict() {
+  const date  = document.getElementById('b-date').value;
+  const start = document.getElementById('b-start').value;
+  const end   = document.getElementById('b-end').value;
+  if (!date || !start || !end) return;
+
+  const bookings = DB.getBookings();
+  const conflict = bookings.find(b => {
+    if (b.date !== date) return false;
+    const bS = b.start, bE = b.end;
+    return !(end <= bS || start >= bE);
+  });
+
+  document.getElementById('conflict-info').style.display  = conflict ? 'block' : 'none';
+  document.getElementById('available-info').style.display = conflict ? 'none' : 'block';
+}
+
+['b-date','b-start','b-end'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', checkConflict);
+});
+
+function doBooking() {
+  const session = DB.getSession();
+  const name    = document.getElementById('b-name').value.trim();
+  const date    = document.getElementById('b-date').value;
+  const start   = document.getElementById('b-start').value;
+  const end     = document.getElementById('b-end').value;
+  const purpose = document.getElementById('b-purpose').value;
+  const notes   = document.getElementById('b-notes').value.trim();
+
+  if (!name || !date || !start || !end || !purpose)
+    return showError('book-error', 'Please fill in all required fields.');
+  if (start >= end)
+    return showError('book-error', 'End time must be after start time.');
+
+  const bookings = DB.getBookings();
+  const conflict = bookings.find(b => {
+    if (b.date !== date) return false;
+    return !(end <= b.start || start >= b.end);
+  });
+  if (conflict)
+    return showError('book-error', `Conflict! Auditorium already booked for "${conflict.name}" on this date & time.`);
+
+  const booking = {
+    id: uid(), userId: session.id, bookedBy: session.name,
+    name, date, start, end, purpose, notes,
+    createdAt: new Date().toISOString()
+  };
+  bookings.push(booking);
+  DB.setBookings(bookings);
+
+  // Clear form
+  ['b-name','b-date','b-start','b-end','b-notes'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('b-purpose').value = '';
+  document.getElementById('conflict-info').style.display = 'none';
+  document.getElementById('available-info').style.display = 'none';
+
+  showSuccess('book-success', '✓ Auditorium booked successfully!');
+  showToast('Booking confirmed for ' + date, 'success');
+  renderAll();
+}
+
+function cancelBooking(id) {
+  const session = DB.getSession();
+  let bookings = DB.getBookings();
+  const b = bookings.find(b => b.id === id);
+  if (!b) return;
+  if (b.userId !== session.id) return showToast('You can only cancel your own bookings.', 'error');
+  if (!confirm('Cancel this booking?')) return;
+  bookings = bookings.filter(b => b.id !== id);
+  DB.setBookings(bookings);
+  showToast('Booking cancelled.', 'error');
+  renderAll();
+}
+
+function renderTable() {
+  const bookings = DB.getBookings().sort((a,b) => a.date.localeCompare(b.date));
+  const session = DB.getSession();
+  const container = document.getElementById('bookings-container');
+
+  if (!bookings.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No bookings yet. Be the first to reserve!</p></div>`;
+    return;
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  let html = `<table class="booking-table">
+    <thead>
+      <tr>
+        <th>#</th><th>Event / Name</th><th>Booked By</th><th>Date</th><th>Time</th><th>Purpose</th><th>Status</th><th>Action</th>
+      </tr>
+    </thead><tbody>`;
+
+  bookings.forEach((b, i) => {
+    const isPast = b.date < today;
+    const isOwner = b.userId === session.id;
+    const status = isPast ? 'past' : 'confirmed';
+    const badge = isPast
+      ? `<span class="status-badge" style="background:rgba(107,114,133,.15);color:var(--muted);border:1px solid var(--border)">Completed</span>`
+      : `<span class="status-badge status-confirmed">Confirmed</span>`;
+    const action = (!isPast && isOwner)
+      ? `<button class="btn-cancel" onclick="cancelBooking('${b.id}')">Cancel</button>`
+      : `<span style="color:var(--muted);font-size:.75rem;font-family:'Space Mono'">—</span>`;
+
+    html += `<tr>
+      <td style="color:var(--muted);font-family:'Space Mono';font-size:.8rem">${String(i+1).padStart(2,'0')}</td>
+      <td><strong>${b.name}</strong>${b.notes ? `<br><span style="color:var(--muted);font-size:.78rem">${b.notes}</span>` : ''}</td>
+      <td style="color:var(--gold)">${b.bookedBy}</td>
+      <td style="font-family:'Space Mono';font-size:.82rem">${b.date}</td>
+      <td style="font-family:'Space Mono';font-size:.82rem">${b.start} – ${b.end}</td>
+      <td><span style="background:var(--bg);padding:4px 10px;border-radius:6px;font-size:.8rem;border:1px solid var(--border)">${b.purpose}</span></td>
+      <td>${badge}</td>
+      <td>${action}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+//  BOOT
+// ─────────────────────────────────────────────
+(function init() {
+  // Always ensure admin account exists in the live store
+  let users = _store.users;
+  if (!users.find(u => u.email === _ADMIN.email)) {
+    users = [_ADMIN, ...users];
+    DB.setUsers(users);
+  }
+
+  let session = DB.getSession();
+  // Refresh session from live store so isAdmin is always accurate
+  if (session) {
+    const fresh = DB.getUsers().find(u => u.id === session.id);
+    if (fresh) { session = fresh; DB.setSession(fresh); }
+    else { DB.clearSession(); session = null; }
+  }
+  if (session) {
+    if (session.isAdmin) {
+      enterAdminPanel(session);
+    } else {
+      enterDashboard(session);
+    }
+  } else {
+    showPage('page-auth');
+  }
+})();
+
+// ─────────────────────────────────────────────
+//  ADMIN NAVIGATION
+// ─────────────────────────────────────────────
+function goAdmin() {
+  enterAdminPanel(DB.getSession());
+}
+
+function goDashboard() {
+  const session = DB.getSession();
+  document.getElementById('nav-name').textContent = '👤 ' + session.name;
+  document.getElementById('btn-admin-panel').style.display = session.isAdmin ? '' : 'none';
+  renderAll();
+  showPage('page-dash');
+}
+
+function enterAdminPanel(session) {
+  showPage('page-admin');
+  try { renderAdminStats(); }    catch(e) { console.warn('renderAdminStats', e); }
+  try { renderAdminTable(); }    catch(e) { console.warn('renderAdminTable', e); }
+  try { renderUsersTable(); }    catch(e) { console.warn('renderUsersTable', e); }
+  try { loadPaymentSettings(); } catch(e) { console.warn('loadPaymentSettings', e); }
+}
+
+// ─────────────────────────────────────────────
+//  ADMIN TAB SWITCH
+// ─────────────────────────────────────────────
+function switchAdminTab(tab) {
+  document.getElementById('atab-bookings').classList.toggle('active', tab === 'bookings');
+  document.getElementById('atab-users').classList.toggle('active', tab === 'users');
+  document.getElementById('atab-settings').classList.toggle('active', tab === 'settings');
+  document.getElementById('admin-bookings-tab').style.display = tab === 'bookings' ? 'block' : 'none';
+  document.getElementById('admin-users-tab').style.display   = tab === 'users'    ? 'block' : 'none';
+  document.getElementById('admin-settings-tab').style.display= tab === 'settings' ? 'block' : 'none';
+  if (tab === 'settings') loadPaymentSettings();
+}
+
+// ─────────────────────────────────────────────
+//  ADMIN STATS
+// ─────────────────────────────────────────────
+function renderAdminStats() {
+  const bookings = DB.getBookings();
+  const users    = DB.getUsers().filter(u => !u.isAdmin);
+  const today    = new Date().toISOString().split('T')[0];
+  document.getElementById('adm-total').textContent    = bookings.length;
+  document.getElementById('adm-upcoming').textContent = bookings.filter(b => b.date >= today).length;
+  document.getElementById('adm-past').textContent     = bookings.filter(b => b.date < today).length;
+  document.getElementById('adm-users').textContent    = users.length;
+  document.getElementById('adm-today').textContent    = bookings.filter(b => b.date === today).length;
+}
+
+// ─────────────────────────────────────────────
+//  ADMIN BOOKINGS TABLE
+// ─────────────────────────────────────────────
+let admSortCol = 'date', admSortDir = 1;
+
+function sortAdminBy(col) {
+  if (admSortCol === col) admSortDir *= -1;
+  else { admSortCol = col; admSortDir = 1; }
+  renderAdminTable();
+}
+
+function renderAdminTable() {
+  const search  = (document.getElementById('adm-search').value || '').toLowerCase();
+  const purpose = document.getElementById('adm-filter-purpose').value;
+  const status  = document.getElementById('adm-filter-status').value;
+  const today   = new Date().toISOString().split('T')[0];
+
+  let bookings = DB.getBookings();
+
+  // Filter
+  bookings = bookings.filter(b => {
+    const matchSearch  = !search  || b.name.toLowerCase().includes(search) || b.bookedBy.toLowerCase().includes(search) || (b.purpose||'').toLowerCase().includes(search) || (b.notes||'').toLowerCase().includes(search);
+    const matchPurpose = !purpose || b.purpose === purpose;
+    const matchStatus  = !status  || (status === 'upcoming' ? b.date >= today : b.date < today);
+    return matchSearch && matchPurpose && matchStatus;
+  });
+
+  // Sort
+  bookings.sort((a, b) => {
+    let av = a[admSortCol] || '', bv = b[admSortCol] || '';
+    return av < bv ? -admSortDir : av > bv ? admSortDir : 0;
+  });
+
+  document.getElementById('adm-count-pill').textContent = bookings.length + ' record' + (bookings.length !== 1 ? 's' : '');
+
+  const container = document.getElementById('admin-bookings-container');
+  if (!bookings.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No bookings match the current filters.</p></div>`;
+    return;
+  }
+
+  const cols = [
+    { key: 'date',      label: 'Date' },
+    { key: 'name',      label: 'Event / Name' },
+    { key: 'bookedBy',  label: 'Booked By' },
+    { key: 'start',     label: 'Time' },
+    { key: 'purpose',   label: 'Purpose' },
+    { key: 'createdAt', label: 'Created' },
+  ];
+
+  let thead = `<tr>
+    <th style="cursor:default">#</th>`;
+  cols.forEach(c => {
+    const icon = admSortCol === c.key ? (admSortDir === 1 ? ' ▲' : ' ▼') : ' ⇅';
+    thead += `<th onclick="sortAdminBy('${c.key}')">${c.label}<span class="sort-icon">${icon}</span></th>`;
+  });
+  thead += `<th style="cursor:default">Status</th><th style="cursor:default">Notes</th><th style="cursor:default">Action</th></tr>`;
+
+  let tbody = '';
+  bookings.forEach((b, i) => {
+    const isPast = b.date < today;
+    const badge  = isPast
+      ? `<span class="status-badge" style="background:rgba(107,114,133,.15);color:var(--muted);border:1px solid var(--border)">Completed</span>`
+      : `<span class="status-badge status-confirmed">Upcoming</span>`;
+    const created = b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '—';
+    tbody += `<tr>
+      <td style="color:var(--muted);font-family:'Space Mono';font-size:.78rem">${String(i+1).padStart(2,'0')}</td>
+      <td><strong>${b.name}</strong></td>
+      <td><span class="user-pill">👤 ${b.bookedBy}</span></td>
+      <td style="font-family:'Space Mono';font-size:.8rem">${b.date}<br><span style="color:var(--muted)">${b.start} – ${b.end}</span></td>
+      <td><span style="background:var(--bg);padding:4px 10px;border-radius:6px;font-size:.78rem;border:1px solid var(--border)">${b.purpose}</span></td>
+      <td style="font-family:'Space Mono';font-size:.75rem;color:var(--muted)">${created}</td>
+      <td>${badge}</td>
+      <td style="color:var(--muted);font-size:.8rem;max-width:150px">${b.notes || '<span style="opacity:.4">—</span>'}</td>
+      <td><button class="btn-delete-booking" onclick="adminDeleteBooking('${b.id}')">🗑 Delete</button></td>
+    </tr>`;
+  });
+
+  container.innerHTML = `<table class="admin-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+function adminDeleteBooking(id) {
+  if (!confirm('Permanently delete this booking? This cannot be undone.')) return;
+  let bookings = DB.getBookings().filter(b => b.id !== id);
+  DB.setBookings(bookings);
+  showToast('Booking deleted by admin.', 'error');
+  renderAdminStats();
+  renderAdminTable();
+}
+
+// ─────────────────────────────────────────────
+//  ADMIN USERS TABLE
+// ─────────────────────────────────────────────
+function renderUsersTable() {
+  const users    = DB.getUsers().filter(u => !u.isAdmin);
+  const bookings = DB.getBookings();
+  const today    = new Date().toISOString().split('T')[0];
+
+  document.getElementById('adm-users-pill').textContent = users.length + ' user' + (users.length !== 1 ? 's' : '');
+
+  const container = document.getElementById('admin-users-container');
+  if (!users.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No users registered yet.</p></div>`;
+    return;
+  }
+
+  let html = `<table class="admin-table">
+    <thead><tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Total Bookings</th>
+      <th>Upcoming</th>
+      <th>Completed</th>
+    </tr></thead><tbody>`;
+
+  users.forEach((u, i) => {
+    const userBookings = bookings.filter(b => b.userId === u.id);
+    const upcoming     = userBookings.filter(b => b.date >= today).length;
+    const past         = userBookings.filter(b => b.date < today).length;
+    html += `<tr>
+      <td style="color:var(--muted);font-family:'Space Mono';font-size:.78rem">${String(i+1).padStart(2,'0')}</td>
+      <td><strong>${u.name}</strong></td>
+      <td style="font-family:'Space Mono';font-size:.8rem;color:var(--muted)">${u.email}</td>
+      <td style="font-family:'Bebas Neue';font-size:1.4rem;color:var(--gold)">${userBookings.length}</td>
+      <td><span class="status-badge status-confirmed">${upcoming} upcoming</span></td>
+      <td><span class="status-badge" style="background:rgba(107,114,133,.15);color:var(--muted);border:1px solid var(--border)">${past} completed</span></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+//  EXPORT CSV
+// ─────────────────────────────────────────────
+function exportCSV() {
+  const bookings = DB.getBookings();
+  if (!bookings.length) return showToast('No bookings to export.', 'error');
+  const headers = ['ID','Event Name','Booked By','Date','Start','End','Purpose','Notes','Created At'];
+  const rows = bookings.map(b => [
+    b.id, b.name, b.bookedBy, b.date, b.start, b.end, b.purpose,
+    (b.notes || '').replace(/,/g, ';'),
+    b.createdAt ? new Date(b.createdAt).toLocaleString() : ''
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'auditoriumx_bookings.csv';
+  a.click();
+  showToast('CSV exported successfully!', 'success');
+}
+// ─────────────────────────────────────────────
+//  PAYMENT MODAL
+// ─────────────────────────────────────────────
+let _pendingBookingData = null;
+
+function switchPayMethod(method) {
+  document.getElementById('pmb-razorpay').classList.toggle('active', method === 'razorpay');
+  document.getElementById('pmb-qr').classList.toggle('active', method === 'qr');
+  document.getElementById('pms-razorpay').classList.toggle('active', method === 'razorpay');
+  document.getElementById('pms-qr').classList.toggle('active', method === 'qr');
+}
+
+function openPaymentModal() {
+  const session = DB.getSession();
+  const name    = document.getElementById('b-name').value.trim();
+  const date    = document.getElementById('b-date').value;
+  const start   = document.getElementById('b-start').value;
+  const end     = document.getElementById('b-end').value;
+  const purpose = document.getElementById('b-purpose').value;
+  const notes   = document.getElementById('b-notes').value.trim();
+
+  if (!name || !date || !start || !end || !purpose)
+    return showError('book-error', 'Please fill in all required fields.');
+  if (start >= end)
+    return showError('book-error', 'End time must be after start time.');
+
+  const bookings = DB.getBookings();
+  const conflict = bookings.find(b => {
+    if (b.date !== date) return false;
+    return !(end <= b.start || start >= b.end);
+  });
+  if (conflict)
+    return showError('book-error', `Conflict! Auditorium already booked for "${conflict.name}" on this date & time.`);
+
+  _pendingBookingData = { session, name, date, start, end, purpose, notes };
+
+  const pay = DB.getPayment();
+  const chargeText = pay.charge > 0 ? '₹' + Number(pay.charge).toLocaleString('en-IN') : '₹0 (Free)';
+
+  // Fill both razorpay and qr sections
+  document.getElementById('modal-charge-amount').textContent  = chargeText;
+  document.getElementById('modal-booking-name').textContent   = name;
+  document.getElementById('modal-charge-amount2').textContent = chargeText;
+  document.getElementById('modal-booking-name2').textContent  = name;
+
+  const img = document.getElementById('modal-qr-img');
+  const placeholder = document.getElementById('modal-qr-placeholder');
+  if (pay.qr) {
+    img.src = pay.qr; img.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
+
+  // Default to Razorpay if key set, else QR
+  switchPayMethod(pay.rzpKey ? 'razorpay' : 'qr');
+  document.getElementById('payment-modal').classList.add('open');
+}
+
+function closePaymentModal() {
+  document.getElementById('payment-modal').classList.remove('open');
+}
+
+// ─── RAZORPAY LAUNCH ───
+function launchRazorpay() {
+  if (!_pendingBookingData) return;
+  const pay     = DB.getPayment();
+  const session = _pendingBookingData.session;
+  const amount  = pay.charge > 0 ? pay.charge * 100 : 100; // paise; min 1 rupee for test
+  const key     = pay.rzpKey || 'rzp_test_1DP5mmOlF5G5ag'; // fallback test key
+
+  const options = {
+    key,
+    amount,
+    currency: 'INR',
+    name: pay.rzpName || 'AuditoriumX',
+    description: _pendingBookingData.name + ' — ' + _pendingBookingData.date,
+    image: '',
+    prefill: {
+      name:  session.name,
+      email: session.email || '',
+    },
+    notes: {
+      event:   _pendingBookingData.name,
+      date:    _pendingBookingData.date,
+      purpose: _pendingBookingData.purpose,
+    },
+    theme: { color: '#c9a84c' },
+    handler: function(response) {
+      // Payment successful
+      closePaymentModal();
+      confirmPayment('razorpay', response.razorpay_payment_id);
+    },
+    modal: {
+      ondismiss: function() {
+        showToast('Payment cancelled.', 'error');
+      }
+    }
+  };
+
+  try {
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function(response) {
+      showToast('Payment failed: ' + (response.error.description || 'Please try again.'), 'error');
+    });
+    rzp.open();
+  } catch(e) {
+    showToast('Razorpay could not load. Check internet connection or try QR method.', 'error');
+    console.error('Razorpay error:', e);
+  }
+}
+
+// ─── CONFIRM BOOKING + SHOW RECEIPT ───
+function confirmPayment(method, txnId) {
+  if (!_pendingBookingData) return;
+  const { session, name, date, start, end, purpose, notes } = _pendingBookingData;
+  const pay = DB.getPayment();
+
+  const generatedTxnId = txnId || ('QR-' + uid().toUpperCase().slice(0,10));
+
+  const booking = {
+    id: uid(), userId: session.id, bookedBy: session.name,
+    name, date, start, end, purpose, notes,
+    createdAt: new Date().toISOString(),
+    paymentStatus: 'paid',
+    paymentMethod: method || 'qr',
+    transactionId: generatedTxnId,
+    amountPaid: pay.charge || 0,
+  };
+  const bookings = DB.getBookings();
+  bookings.push(booking);
+  DB.setBookings(bookings);
+
+  // Clear form
+  ['b-name','b-date','b-start','b-end','b-notes'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('b-purpose').value = '';
+  document.getElementById('conflict-info').style.display = 'none';
+  document.getElementById('available-info').style.display = 'none';
+
+  closePaymentModal();
+  _pendingBookingData = null;
+
+  renderAll();
+  showReceiptModal(booking, session);
+}
+
+// ─── RECEIPT MODAL ───
+function showReceiptModal(booking, session) {
+  const fmtDate = new Date(booking.date + 'T00:00').toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const amtDisplay = booking.amountPaid > 0 ? '₹' + Number(booking.amountPaid).toLocaleString('en-IN') : 'Free';
+  const methodLabel = booking.paymentMethod === 'razorpay' ? '⚡ Razorpay' : '📱 UPI / QR';
+
+  document.getElementById('receipt-details').innerHTML = `
+    <div class="receipt-row"><span class="rlabel">EVENT NAME</span><span class="rval">${booking.name}</span></div>
+    <div class="receipt-row"><span class="rlabel">DATE</span><span class="rval">${fmtDate}</span></div>
+    <div class="receipt-row"><span class="rlabel">TIME SLOT</span><span class="rval">${booking.start} – ${booking.end}</span></div>
+    <div class="receipt-row"><span class="rlabel">PURPOSE</span><span class="rval">${booking.purpose}</span></div>
+    <div class="receipt-row"><span class="rlabel">BOOKED BY</span><span class="rval gold">${session.name}</span></div>
+    <div class="receipt-row"><span class="rlabel">AMOUNT PAID</span><span class="rval gold">${amtDisplay}</span></div>
+    <div class="receipt-row"><span class="rlabel">METHOD</span><span class="rval green">${methodLabel}</span></div>
+    <div class="receipt-row"><span class="rlabel">STATUS</span><span class="rval green">✓ Confirmed</span></div>
+  `;
+  document.getElementById('receipt-txn-id').textContent = 'Transaction ID: ' + booking.transactionId;
+  document.getElementById('receipt-modal').classList.add('open');
+
+  // In-app notification toast
+  showToast('🎉 Payment successful! Booking confirmed for ' + booking.date, 'success');
+}
+
+function closeReceiptModal() {
+  document.getElementById('receipt-modal').classList.remove('open');
+  showSuccess('book-success', '✓ Payment recorded & auditorium booked successfully!');
+}
+
+// Close modals on overlay click
+document.getElementById('payment-modal').addEventListener('click', function(e) {
+  if (e.target === this) closePaymentModal();
+});
+document.getElementById('receipt-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeReceiptModal();
+});
+
+// Update charge preview in booking form on load / dashboard entry
+function updateFormChargePreview() {
+  const pay = DB.getPayment();
+  const el = document.getElementById('form-charge-display');
+  const wrap = document.getElementById('charge-preview');
+  if (el) el.textContent = pay.charge > 0 ? '₹' + Number(pay.charge).toLocaleString('en-IN') : 'Free';
+  if (wrap) wrap.style.display = 'flex';
+}
+
+// ─────────────────────────────────────────────
+//  ADMIN PAYMENT SETTINGS
+// ─────────────────────────────────────────────
+function loadPaymentSettings() {
+  const pay = DB.getPayment();
+  document.getElementById('adm-charge-amount').value = pay.charge || '';
+  document.getElementById('adm-charge-label').value  = pay.label  || '';
+  document.getElementById('adm-rzp-key').value       = pay.rzpKey  || '';
+  document.getElementById('adm-rzp-name').value      = pay.rzpName || '';
+  updateSettingsPreview(pay.charge, pay.label);
+  const thumb = document.getElementById('qr-thumb-preview');
+  if (pay.qr) {
+    thumb.src = pay.qr; thumb.style.display = 'block';
+    document.getElementById('qr-upload-text').textContent = '✓ QR uploaded — click to change';
+  }
+}
+
+function updateSettingsPreview(charge, label) {
+  document.getElementById('settings-charge-preview').textContent =
+    charge > 0 ? '₹' + Number(charge).toLocaleString('en-IN') : '₹0 (Free)';
+  document.getElementById('settings-charge-label-preview').textContent = label || 'No description set';
+}
+
+function handleQRUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const thumb = document.getElementById('qr-thumb-preview');
+    thumb.src = e.target.result;
+    thumb.style.display = 'block';
+    document.getElementById('qr-upload-text').textContent = '✓ ' + file.name + ' — click to change';
+    window._pendingQR = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function savePaymentSettings() {
+  const charge  = parseFloat(document.getElementById('adm-charge-amount').value) || 0;
+  const label   = document.getElementById('adm-charge-label').value.trim();
+  const rzpKey  = document.getElementById('adm-rzp-key').value.trim();
+  const rzpName = document.getElementById('adm-rzp-name').value.trim();
+  const pay     = DB.getPayment();
+  const qr      = window._pendingQR || pay.qr || '';
+  DB.setPayment({ charge, label, qr, rzpKey, rzpName });
+  window._pendingQR = null;
+  updateSettingsPreview(charge, label);
+  showToast('Payment settings saved!', 'success');
+}
+</script>
+</body>
+</html>
